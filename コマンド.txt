@@ -1,0 +1,7 @@
+git commit -am ""
+git push origin main
+
+
+説明
+これでaddとcommitが同時にできる
+いつもの
