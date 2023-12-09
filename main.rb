@@ -129,9 +129,12 @@ group_root_dfs(0,0,group_list)
 
 #各グループ間の最短距離を求める
 def cal_group_dist(pre, nex)
-  sum = 2000
+  sum = [2000, 2000]
   look_list = [[0,1], [0,3], [2,1], [2,3]]
   dij = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+  root_first = []
+  root_second = []
+  root_flag = 0
   for k in 0..3
     flag = 4
     dist = Array.new(N){Array.new(N,-1)}
@@ -152,12 +155,23 @@ def cal_group_dist(pre, nex)
         end
       end
     end
-    for kk in 0..3
-     if sum > dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
-      sum = dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
-      flag = kk
-     end
+    kk = 0
+    now_value = dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
+    for kkk in 1..3
+      if now_value > dist[nex[look_list[kkk][0]]][nex[look_list[kkk][1]]]
+        now_value = dist[nex[look_list[kkk][0]]][nex[look_list[kkk][1]]]
+        kk = kkk
+      end
     end
+    if sum[0] > dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
+      sum[0] = dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
+      flag = kk
+      root_flag = 0
+     elsif sum[1] > dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
+      sum[1] = dist[nex[look_list[kk][0]]][nex[look_list[kk][1]]]
+      flag = kk
+      root_flag = 1
+     end
     next if flag == 4
 
     #最短距離の頂点を取得
@@ -181,9 +195,16 @@ def cal_group_dist(pre, nex)
         end
       end
     end
+    if root_flag == 0
+      root_second = root_first.map(&:dup)
+      root_first = root.map(&:dup)
+      root_first.reverse!
+    elsif root_flag == 1
+      root_second = root.map(&:dup)
+      root_second.reverse!
+    end
   end
-  root.reverse!
-  return root
+  return [root_first, root_second]
 end
 
 $group_dist = Array.new($group_root.size){Array.new($group_root.size){Array.new()}}
@@ -194,12 +215,10 @@ for i in 0...$group_root.size
   end
 end
 #0,0に戻るときの距離
-for i in 1...$group_root.size
+for i in 0...$group_root.size
   $group_dist[i][i] = cal_group_dist(group_edge[$group_root[i]], [0,0,0,0])
 end
 
-p $group_dist
-exit
 
 
 #初期解
@@ -240,72 +259,10 @@ end
 
 
 
+
+
+
 #つなげていく
-#0,0から0,0が含まれるどこかの頂点->頂点から・・・->最後の頂点->0,0に戻る
-# 幅優先探索で点と点をつなげる
-def group_to_group(i, j, i_min, j_min, i_max, j_max)
-  #幅優先たいむ
-  root= []
-  que = [[i,j]]
-  dist = Array.new(N) { Array.new(N, -1) }
-  dist[i][j] = 0
-  dij = [[0, 1], [0, -1], [1, 0], [-1, 0]]
-  
-  while !que.empty?
-    x, y = que.shift
-    for k in 0..3
-      move = dij[k]
-      nx = x + move[0]; ny = y + move[1]
-      next if nx < 0 || ny < 0 || nx >= N || ny >= N
-      next if dist[nx][ny] != -1
-
-      if (move[0] == 0 && V[x][[y, ny].min] == 0) || (move[1] == 0 && H[[x, nx].min][y] == 0)
-        dist[nx][ny] = dist[x][y] + 1
-        que << [nx, ny]
-      end
-    end
-  end
-
-  #最短距離の頂点を取得
-  score = dist[i_min][j_min]
-  root = [[i_min, j_min]]
-  x, y = i_min, j_min
-  if dist[i_min][j_max] < score
-    root = [[i_min, j_max]]
-    x, y = i_min, j_max
-    score = dist[i_min][j_max]
-  end
-
-  if dist[i_max][j_min] < score
-    root = [[i_max, j_min]]
-    x, y = i_max, j_min
-    score = dist[i_max][j_min]
-  end
-
-  if dist[i_max][j_max] < score
-    root = [[i_max, j_max]]
-    x, y = i_max, j_max
-    score = dist[i_max][j_max]
-  end
-  #復元
-  while score > 1
-    for k in 0..3
-      move = dij[k]
-      nx = x + move[0]; ny = y + move[1]
-      next if nx < 0 || ny < 0 || nx >= N || ny >= N
-      if (move[0] == 0 && V[x][[y, ny].min] == 0) || (move[1] == 0 && H[[x, nx].min][y] == 0)
-        if dist[nx][ny] == score - 1
-          root << [nx, ny]
-          x, y = nx, ny
-          score -= 1
-          break
-        end
-      end
-    end
-  end
-  root.reverse!
-  return root
-end
 def group_inner_dfs(i, j, i_min, j_min, i_max, j_max)
   $dist[i][j] = 1
   dij = [[0, 1], [0, -1], [1, 0], [-1, 0]]
