@@ -110,7 +110,7 @@ $group_root = [0]
 $dist = Array.new(N){Array.new(N, 0)}
 def group_root_dfs(i,j,group_list)
   $dist[i][j] = 1
-  dij = [[0, 1], [0, -1], [1, 0], [-1, 0]]
+  dij = [[1, 0], [0, 1], [0, -1], [-1, 0]]
   4.times do |d|
     di, dj = dij[d]
     i2, j2 = i + di, j + dj
@@ -210,31 +210,49 @@ end
 $group_dist = Array.new($group_root.size){Array.new($group_root.size){Array.new()}}
 for i in 0...$group_root.size
   for j in (i+1)...$group_root.size
-    $group_dist[i][j] = cal_group_dist(group_edge[$group_root[i]], group_edge[$group_root[j]])
-    $group_dist[j][i] = $group_dist[i][j].reverse
+    $group_dist[i][j] = cal_group_dist(group_edge[i], group_edge[j])
+    $group_dist[j][i] = [$group_dist[i][j][0].reverse.map(&:dup), $group_dist[i][j][1].reverse.map(&:dup)]
   end
 end
 #0,0に戻るときの距離
 for i in 0...$group_root.size
-  $group_dist[i][i] = cal_group_dist(group_edge[$group_root[i]], [0,0,0,0])
+  $group_dist[i][i] = cal_group_dist(group_edge[i], [0,0,0,0])
 end
 
 
 
 #初期解
-now_dist = 0
-for num in 1...$group_dist.size
-  now_dist += $group_dist[num-1][num].size
+def root_distance(root)
+  now_dist = 0
+  now_point = [0,0]#現在の座標
+  for i in 1...root.size
+    now = root[i]
+    pre = root[i-1]
+    if now_point == $group_dist[pre][now][0][0]
+      now_dist += $group_dist[pre][now][1].size
+      now_point = $group_dist[pre][now][1][-1]
+    else
+      now_dist += $group_dist[pre][now][0].size
+      now_point = $group_dist[pre][now][0][-1]
+    end
+  end
+  #最後に0,0に戻るからその分も足さないといけない
+  now = root[-1]
+  if now_point == $group_dist[now][now][0][0]
+    now_dist += $group_dist[now][now][1].size
+  else
+    now_dist += $group_dist[now][now][0].size
+  end
+  return now_dist
 end
-#最後に0,0に戻るからその分も足さないといけない
-now_dist += $group_dist[num][num].size
+now_dist = root_distance($group_root)
 
 
 #2-opt法
 time = Time.now
 size = $group_root.size
-if size > 2
-while Time.now - time < 5
+if size > 1
+while Time.now - time < 2
   group_root_temp = $group_root.dup
   i = rand(1...size)
   j = rand(1...size)
@@ -242,12 +260,7 @@ while Time.now - time < 5
   i, j = j, i if i > j
   group_root_temp = group_root_temp[0...i] + group_root_temp[i..j].reverse + group_root_temp[j+1...size]
 
-  #変化後のルートの距離を計算
-  temp_dist = 0
-  for num in 1...size
-    temp_dist += group_root_temp[num-1][num]
-  end
-  temp_dist += group_root_temp[num][num]
+  temp_dist = root_distance(group_root_temp)
 
   #変更後のルートの方が短ければ更新
   if temp_dist < now_dist
@@ -256,8 +269,9 @@ while Time.now - time < 5
   end
 end
 end
-
-
+group_list.each{puts _1.join(" ")}
+p $group_root
+exit
 
 
 
@@ -275,8 +289,6 @@ def group_inner_dfs(i, j, i_min, j_min, i_max, j_max)
     end
   end
 end
-
-
 
 #0,0から0,0が含まれる長方形の頂点への移動
 ans_root = [[0,0]]
